@@ -1,0 +1,200 @@
+---
+title: "Screen Results Summary"
+date: "`r format(Sys.time(), '%Y %B %d')`"
+output: 
+  html_document:
+    number_sections: true
+    toc: true
+    toc_depth: 4
+    toc_float:
+      collapse: TRUE
+    theme: cosmo
+params:
+  s3bucket: "s3://[]"
+  datapath: "projects/manuscript-crispr-hdt/data"
+  file_screenlisting: "projects/manuscript-crispr-hdt/data/20240229-screencomparison-listing.txt"
+  outpath: "projects/manuscript-crispr-hdt/summaries/qc"
+---
+
+```{r datapaths, include=FALSE}
+s3bucket <- params$s3bucket
+s3path <- file.path(params$s3bucket, params$datapath)
+s3file <- file.path(params$s3bucket, params$file_screenlisting)
+s3outpath <- file.path(params$s3bucket, params$outpath)
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+library(aws.s3)
+library(aws.ec2metadata)
+library(digest)
+library(janitor)
+
+library(data.table)
+library(tidyr)
+library(magrittr)
+
+library(gt)
+library(ggplot2)
+library(cowplot)
+
+source("r-utils/io-utils.R")
+```
+
+# Objective
+
+- Review QC metrics for the genome-wide screens
+
+# Data 
+
+```{r}
+# read dt merge
+dt_screens <- dt_froms3(s3file)
+dt_screens %>% gt()
+```
+
+# Summary
+
+## Guide-Level
+
+### Table: Guide-Level QC Metrics
+
+```{r}
+# retrieve all guide count files
+# reformat and stack
+list_dts <- lapply(1:nrow(dt_screens), function(x) get_guidecounts(report_id = dt_screens[x, report_id],
+																									comparison_id = dt_screens[x, comparison_id],
+																									s3path))
+
+dt_counts <- rbindlist(list_dts)
+
+dt_stats <- dt_counts[ ,list(total_mapped_reads=sum(raw_count),
+												 guides_count=length(unique(sgrna)),
+												 pctguides_zero=100*sum(raw_count==0)/length(unique(sgrna)),
+												 gini=BioQC::gini(log2(raw_count+1)),
+												 median_rpg=median(raw_count),
+												 mad_rpg=mad(raw_count),
+												 max_rpg=max(raw_count)), by=.(comparison_id, sample)]
+
+dt_stats <- merge(dt_screens, dt_stats, by = "comparison_id")
+dt_stats[, sample_description := NULL]
+dt_stats[, hpi := NULL] 
+dt_stats[, selection := NULL] 
+dt_stats[, screen := paste0(pathogen, "/", cell_line)]
+gt_stats <- dt_stats %>% gt() |> fmt_number(columns = c("gini", "mad_rpg"), decimal = 2) |> fmt_number(columns = c("pctguides_zero"), n_sigfig = 2)
+gt_stats
+```
+
+```{r}
+
+.plot_metric <- function(dt, metric, label_metric){
+	
+	p <- ggplot(dt, aes(x = get(metric), y = screen, color = sample)) + geom_point(shape = 19)
+	p <- p + theme_minimal()
+	p <- p + scale_color_manual(values = c("compare_from" = "slategray", "compare_to" = "steelblue2"))
+	p <- p + labs(x = label_metric, y = "")
+	if(metric %in% c("median_rpg")){
+		p <- p + scale_x_log10()
+    p <- p + geom_vline(xintercept = 100, col = "red", linetype = 2)
+    p <- p + theme(legend.position = 'top')
+	}else{
+		p <- p + theme(legend.position = 'none', axis.text.y = element_blank())
+	}
+	p	
+}
+
+qcmetrics <- c("median_rpg" = "Median\nReads Per Guide", "pctguides_zero" = "% Guides Zero Count", "gini" = "Gini Coef")
+list_plots <- lapply(1:length(qcmetrics), function(x) .plot_metric(dt_stats, names(qcmetrics)[x], qcmetrics[x]))
+
+```
+
+```{r}
+# sgRNA lfc distribution from MAGeCK sgRNA files
+list_dts <- lapply(1:nrow(dt_screens), function(x) get_guidelfc(report_id = dt_screens[x, report_id],
+																									comparison_id = dt_screens[x, comparison_id],
+																									s3path))
+
+dt_guidelfc <- rbindlist(list_dts)
+dt_guidelfc <- merge(unique(dt_stats[,.(comparison_id, screen)]), dt_guidelfc, by = "comparison_id")
+
+p_lfc <- ggplot(dt_guidelfc[grepl("NO_SITE", gene)], aes(y = screen, x = lfc)) + geom_boxplot()
+p_lfc <- p_lfc + geom_vline(xintercept = c(-log2(1.1), log2(1.1)), col = "red", linetype = 2)
+p_lfc <- p_lfc + labs(y = "", x = "logFC\nNon-Targeting Guides")
+p_lfc <- p_lfc + theme_minimal()
+p_lfc <- p_lfc + theme(axis.text.y = element_blank())
+
+list_plots[[4]] <- p_lfc
+```
+
+
+### Plot: Guide-Level Metrics Summary
+
+```{r, fig.width = 12}
+p_qc <- plot_grid(plotlist = list_plots, align = "h", nrow = 1, rel_widths = c(1, 0.6, 0.6, 0.6))
+p_qc
+file_qcguide <- "fig-qc-guidelevelscreenmetrics.pdf"
+ggsave(file_qcguide, plot = p_qc, width = 10, height = 4, units = "in", dpi = 300)
+put_object(file_qcguide, object = file.path(s3outpath, file_qcguide), bucket = s3bucket)
+```
+
+## Gene-Level Scores
+
+```{r}
+# score and p-value distributions from MAGeCK gene summary files
+# distribution
+list_dts <- lapply(1:nrow(dt_screens), function(x) get_genescores(report_id = dt_screens[x, report_id],
+																									comparison_id = dt_screens[x, comparison_id],
+																									s3path))
+
+dt_genescores <- rbindlist(list_dts)
+dt_genescores <- merge(unique(dt_stats[,.(comparison_id, screen)]), dt_genescores, by = "comparison_id")
+```
+
+
+### Plot: CDF of MAGeCK p-values (unadjusted)
+
+Uniform distribution reference 
+```{r, fig.width = 10, fig.height = 9}
+p <- ggplot(dt_genescores, aes(x = pos_p_value)) + facet_wrap(~screen) + stat_ecdf() + stat_function(fun = punif, color = "black", linetype = 2)
+p <- p + theme_minimal()
+p <- p + labs(x = "MAGeCK p-value (pos)", y= "CDF")
+p
+
+file_plotlfc <- "fig-qc-genescore-pospvalues.pdf"
+ggsave(file_plotlfc, plot = p, width = 8.5, height = 8.5, units = "in", dpi = 300)
+put_object(file_plotlfc, object = file.path(s3outpath, file_plotlfc), bucket = s3bucket)
+```
+
+```{r, fig.width = 10, fig.height = 9}
+p <- ggplot(dt_genescores, aes(x = neg_p_value)) + facet_wrap(~screen) + stat_ecdf() + stat_function(fun = punif, color = "black", linetype = 2)
+p <- p + theme_minimal()
+p <- p + labs(x = "MAGeCK p-value (neg)", y= "CDF")
+p
+
+file_plotlfc <- "fig-qc-genescore-negpvalues.pdf"
+ggsave(file_plotlfc, plot = p, width = 8.5, height = 8.5, units = "in", dpi = 300)
+put_object(file_plotlfc, object = file.path(s3outpath, file_plotlfc), bucket = s3bucket)
+```
+
+
+```{r}
+# save results
+formatted_date <- format(Sys.time(), '%Y%m%d')
+file_stats <- paste0(formatted_date, "-screencomparison-stats.txt")
+
+s3write_using(dt_stats, 
+              FUN = data.table::fwrite, 
+              sep = "\t", 
+              object = file.path(s3outpath, file_stats), bucket = s3bucket)
+
+file_statspretty <- paste0(formatted_date, "-screencomparison-stats.html")
+gtsave(gt_stats, file_statspretty)
+put_object(file_statspretty, object = file.path(s3outpath, file_statspretty), bucket = s3bucket)
+```
+
+# Session Info
+
+```{r}
+sessionInfo()
+```
