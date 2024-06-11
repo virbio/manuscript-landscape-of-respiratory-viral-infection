@@ -56,7 +56,6 @@ object CliParser {
       config: String = "",
       notebooks: String = "./",
       tempdir: String = "./",
-      open: Boolean = true
   ) {
     def json = {
       this.asJson
@@ -73,8 +72,6 @@ object CliParser {
         .action((p, c) => c.copy(tempdir = p)),
       opt[String]("out-nb")
         .action((p, c) => c.copy(notebooks = p)),
-      opt[Unit]("not-open")
-        .action((p, c) => c.copy(open = false))
     )
   }
 }
@@ -163,11 +160,7 @@ object Cli extends App {
 
         fileutils.writeToFile(new java.io.File(file), document.render)
 
-        if (cliConfig.open) {
-          fileutils.exec(s"open $file")()
-        } else {
-          println(file)
-        }
+        println(file)
 
         println("DONE @ " + java.time.ZonedDateTime.now)
       }
