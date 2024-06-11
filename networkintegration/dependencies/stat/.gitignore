@@ -1,0 +1,11 @@
+target
+lib/
+*pdf
+pred*csv
+*json
+*hs_err*
+TODO
+.bloop/
+.metals/
+project/metals.sbt
+project/project/metals.sbt

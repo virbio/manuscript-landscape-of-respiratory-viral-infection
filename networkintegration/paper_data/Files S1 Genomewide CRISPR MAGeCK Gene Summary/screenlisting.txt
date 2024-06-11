@@ -1,0 +1,13 @@
+comparison_id	screen
+90	IAV A549 (Homo sapiens), sorting 24HPI
+138	IAV H1HeLa (Homo sapiens), survival 48HPI
+30	IAV BV-2 (Mus musculus), survival 48HPI
+102	HRV H1HeLa (Homo sapiens), survival 30HPI
+107	PIV A549 (Homo sapiens), sorting:pathogen low 36HPI
+1	RSV HEp-2 (Homo sapiens), sorting:pathogen low 48HPI
+366	HCoV-229E SK-MES-1 (Homo sapiens), survival 72HPI
+383	HCoV-NL63 Huh-7 (Homo sapiens), survival 72HPI
+381	HCoV-OC43 HCT-8 (Homo sapiens), survival 96HPI
+386	MERS-CoV (1) NCI-H727 (Homo sapiens), survival 48HPI
+385	MERS-CoV (2) NCI-H727 (Homo sapiens), survival 48HPI
+314	SARS-CoV-2 Vero E6 (Chlorocebus sabaeus), survival 72HPI
