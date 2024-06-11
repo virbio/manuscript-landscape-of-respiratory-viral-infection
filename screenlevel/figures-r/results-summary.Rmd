@@ -1,0 +1,541 @@
+---
+title: "Screen Results Summary"
+date: "`r format(Sys.time(), '%Y %B %d')`"
+output: 
+  html_document:
+    number_sections: true
+    toc: true
+    toc_depth: 4
+    toc_float:
+      collapse: TRUE
+    theme: cosmo
+params:
+  s3bucket: "s3://[]"
+  datapath: "projects/manuscript-crispr-hdt/data"
+  file_screenlisting: "projects/manuscript-crispr-hdt/data/20240229-screencomparison-listing.txt"
+  outpath: "projects/manuscript-crispr-hdt/summaries/results"
+  file_mouse2human: "projects/manuscript-crispr-hdt/resources/mouse2human/gene_orthologs.tsv"
+  file_agm2human: "projects/manuscript-crispr-hdt/resources/agm2human/mart_export.txt"
+  file_humanalias: "projects/manuscript-crispr-hdt/resources/aliases/gene_aliases.tsv"
+  file_corum: "projects/manuscript-crispr-hdt/resources/corum/humanComplexes.txt"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+
+library(aws.s3)
+library(aws.ec2metadata)
+library(digest)
+library(janitor)
+
+library(data.table)
+library(tidyr)
+library(magrittr)
+
+library(gt)
+library(ggplot2)
+library(cowplot)
+library(pheatmap)
+library(seriation)
+
+library(fgsea)
+library(msigdbr)
+
+library(igraph)
+library(visNetwork)
+
+source("r-utils/io-utils.R")
+source("r-utils/summary-utils.R")
+source("r-utils/convert-utils.R")
+```
+
+```{r datapath}
+s3bucket <- params$s3bucket
+s3path <- file.path(s3bucket, params$datapath)
+s3file <- file.path(s3bucket, params$file_screenlisting)
+s3outpath <- file.path(s3bucket, params$outpath, format(Sys.time(), "%Y%m%d"))
+
+# from genecards (2020)
+mouse2human_s3file <- file.path(s3bucket, params$file_mouse2human)
+mouse2human_dt <- format_dtmouse2human(mouse2human_s3file)
+# from ensembl (2020)
+agm2human_s3file <- file.path(s3bucket,params$file_agm2human)
+agm2human_dt <- format_dtagm2human(agm2human_s3file)
+# from genecards (2020)
+humanalias_s3file <- file.path(s3bucket, params$file_humanalias)
+humanalias_dt <- format_dthumanalias(humanalias_s3file)
+# from corum (28.11.2022 Corum 4.1 release)
+corum_s3file <- file.path(s3bucket, params$file_corum)
+```
+
+# Objective
+
+- Summarize genome-wide screen results from MAGeCK files
+- Using default option for scoring (recommended for genome-wide screens)
+
+```{r}
+# read dt screens
+dt_screens <- dt_froms3(s3file)
+
+# simplify pathogen names for display
+# remove -GFP from recombinant RSV and PIV3
+list_rename <- list("RSV-GFP5"="RSV",
+										"PIV3-GFP"="PIV",
+										"IAV-PR8"="IAV",
+										"HRV-16"="HRV",
+										"MERS-CoV-EMC2012"="MERS-CoV (1)",
+										"MERS-CoV-FL2014"="MERS-CoV (2)")
+
+catch_rename <- lapply(names(list_rename), function(virus) dt_screens[pathogen %in% virus, pathogen := list_rename[[virus]]])
+
+dt_screens[, screen := paste0(pathogen, "_", gsub(" ", "_", cell_line))]
+order_pathogen <- c("IAV",
+                    "HRV",
+                    "PIV",
+                    "RSV",
+                    "HCoV-229E",
+                    "HCoV-NL63",
+                    "HCoV-OC43",
+                    "MERS-CoV (1)",
+                    "MERS-CoV (2)",
+                    "SARS-CoV-2"
+                    )
+dt_screens[, pathogen := factor(pathogen, levels = order_pathogen)]
+dt_screens[, screen_label := paste0(pathogen, " ", cell_line, ", ", selection, " ", hpi, "HPI")]
+dt_screens[, screen_label_long := paste0(pathogen, " ", cell_line, " (", library_species, "), ", selection, " ", hpi, "HPI")]
+dt_screens[, screen_label_short := paste0(pathogen, " ", cell_line)]
+
+# colors per pathogen
+# purples
+# https://www.color-hex.com/color-palette/28652
+# oranges
+# https://www.color-hex.com/color-palette/1045810
+# default neg strand
+dt_screens[, color_pathogen := "#e69206"]
+# PIV
+dt_screens[grepl("PIV", pathogen), color_pathogen := "#fd7f04"]
+#RSV
+dt_screens[grepl("RSV", pathogen), color_pathogen := "#ff6500"]
+# HRV pos
+dt_screens[grepl("HRV", pathogen), color_pathogen := "#310047"]
+# CoV
+dt_screens[grepl("CoV", pathogen), color_pathogen := "#d16aff"]
+dt_screens[grepl("MERS-CoV", pathogen), color_pathogen := "#9614d0"]
+dt_screens[grepl("SARS-CoV", pathogen), color_pathogen := "#a796e8"]
+```
+
+# Analysis
+
+## Figures, Tables, and Files
+
+### Files S1: MAGeCK Gene Summary Files
+
+```{r}
+# read all mageck files
+list_dtmageck <-
+	lapply(1:nrow(dt_screens), function(x)
+		get_genescores(report_id = dt_screens[x, report_id],
+									 comparison_id = dt_screens[x, comparison_id],
+									 s3path))
+
+# reorg all source mageck gene summary files in new folder with results
+list_catch <- lapply(1:nrow(dt_screens), function(x)
+									write_genescores(report_id = dt_screens[x, report_id],
+																	 comparison_id = dt_screens[x, comparison_id],
+																	 screen_name = dt_screens[x, screen],
+																	 s3path, s3outpath, s3bucket))
+
+print_cols <- c("comparison_id", "screen_label_long")
+dt_print <- dt_screens[, ..print_cols]
+setnames(dt_print, "screen_label_long", "screen")
+aws.s3::s3write_using(dt_print, 
+											fwrite, 
+											sep = "\t", 
+											object = file.path(s3outpath, 
+																				 "mageck", "screenlisting.txt"), 
+											bucket = s3bucket)
+```
+
+### Files S2: Volcano Plots
+
+```{r}
+# format for volcano plots
+list_dtscores <-
+	lapply(list_dtmageck, function(dt_mageck)
+		format_mageckoutput(
+			dt_mageck,
+			report_cols = c(
+				"comparison_id",
+				"id",
+				"num_guides",
+				"LFC",
+				"FDR",
+				"pval",
+				"score",
+				"direction",
+				"score_source"
+			)
+		))
+
+list_plots <- lapply(1:nrow(dt_screens), function(i)
+	plot_volcano(
+		dt = list_dtscores[[i]],
+		x = "LFC",
+		y = "score",
+		topnames = "",
+		top = 20,
+		x_cutoff = 0,
+		y_cutoff = 0,
+		xhitcol = "LFC",
+		yhitcol = "FDR",
+		xhit_cutoff = 0,
+		yhit_cutoff = 0.05,
+		ylab = "-Log10(MAGeCK Score)",
+		label_fontsize = 2.5,
+		main = paste0(
+			dt_screens[i, pathogen],
+			"|",
+			dt_screens[i, cell_line],
+			"\n",
+			dt_screens[i, selection],
+			" ",
+			dt_screens[i, hpi],
+			"HPI FDR<0.05"
+		)
+	))
+
+files_volcano <-
+	file.path(s3outpath, "volcano", dt_screens[, paste0(comparison_id, "_", screen, "_volcano.pdf")])
+sapply(1:length(files_volcano), function(i)
+	s3save_ggplot(
+		ggp = list_plots[[i]],
+		object_s3uri = files_volcano[i],
+		s3bucket = s3bucket,
+		width = 5,
+		height = 5.2,
+		units = "in",
+		dpi = 300
+	))
+# summarize hits with different cutoffs
+```
+
+```{r, fig.width = 12, fig.height = 16}
+v1 <- plot_grid(plotlist = list_plots[1:6], ncol = 2, nrow = 3)
+v1
+
+s3save_ggplot(
+	ggp = v1,
+	object_s3uri = 	file.path(s3outpath, "volcano", "page1_volcano.pdf"),
+	s3bucket = s3bucket,
+	width = 8.5,
+	height = 11,
+	units = "in",
+	dpi = 300
+)
+```
+
+```{r, fig.width = 12, fig.height = 16}
+v2 <- plot_grid(plotlist = list_plots[7:12], ncol = 2, nrow = 3)
+v2
+s3save_ggplot(
+	ggp = v2,
+	object_s3uri = file.path(s3outpath, "volcano", "page2_volcano.pdf"),
+	s3bucket = s3bucket,
+	width = 8.5,
+	height = 11,
+	units = "in",
+	dpi = 300
+)
+```
+
+
+### Figure 1: Scatter Plot of Significance Scores Per Screen
+
+```{r}
+dt_scores <- rbindlist(list_dtscores)
+dt_scores <-
+	merge(dt_scores, dt_screens[, .(comparison_id, pathogen, screen_label, screen_label_long)], by = "comparison_id")
+```
+
+```{r}
+dt_plot <- dt_scores[, random_index := sample(1:length(id), length(id)), by = comparison_id]
+# color by hit and direction
+# column for top 20 rank by FDR in each comparison
+dt_plot[, rank:= frank(FDR, ties.method = "first"), by = comparison_id]
+dt_plot[, genelabel := ifelse(rank <= 10, id, "")]
+dt_plot[, hit := ifelse(FDR> 0.05, "no", ifelse(direction == "pos", "enriched", "depleted"))]
+
+# annotate receptor hits
+list_receptor <- c("ACE2", "ANPEP", "DPP4", "ICAM1")
+dt_plot[id %in% list_receptor & hit != "no", hit := "receptor"]
+hitcolors <- c("no" = "gray", "enriched" = "#d73027", "depleted" = "#4575b4", "receptor" = "black")
+
+p <- ggplot(dt_plot, aes(x = random_index, y = -log10(FDR), label = genelabel, color = factor(hit), alpha = -log10(FDR))) + geom_point(size = 0.01) + ggrepel::geom_text_repel(size = 2, max.overlaps = 100) + facet_wrap(~screen_label, ncol = 1) + theme_minimal()
+p <- p + scale_color_manual(values = hitcolors)
+p <- p + theme(axis.text = element_text(size = 5), axis.title.x = element_blank(), axis.title.y = element_text(size = 7), legend.position = "none")
+p
+
+s3save_ggplot(ggp = p, 
+							object_s3uri = file.path(s3outpath, "hitsummary", "Fig 1 scatterview.pdf"),
+							s3bucket = s3bucket, width = 7, height = 10, units = "in")
+s3save_ggplot(ggp = p, 
+							object_s3uri = file.path(s3outpath, "hitsummary", "Fig 1 scatterview.jpg"),
+							s3bucket = s3bucket, device = "jpeg", width = 7, height = 10, units = "in", dpi = 320, bg = "white")
+```
+
+#### Hit Summary Across Screens
+
+```{r}
+# use FDR < 0.05
+gt_hits <-
+	dt_scores[order(pathogen)][FDR < 0.05, .N, by = .(screen_label_long, direction)] %>% pivot_wider(
+		id_cols = "screen_label_long",
+		names_from = direction,
+		values_from = N,
+		values_fill = 0
+	) %>% gt() |> tab_spanner(label = "Genes, FDR < 0.05", columns = c(pos, neg)) |>
+	cols_label(screen_label_long = "CRISPRko Screen - Virus|Cell Line (Species)|Selection",
+						 pos = "Enriched",
+						 neg = "Depleted")
+
+gt_hits
+file_gthits <- "screenhits.html"
+gtsave(gt_hits, file_gthits)
+put_object(file_gthits, object = file.path(s3outpath, "hitsummary", file_gthits), bucket = s3bucket)
+```
+
+### Figure S2: PCA of pro-pathogen scores
+
+Based on normalized gene-level ranks (guide enrichment) per screen
+
+```{r}
+# PCA on the qnorm(normalized rank) for pos
+# FDR < 0.25 for any screen
+# exclude genes not converted 1:1 to human gene symbol
+
+list_dtbydirpos <- lapply(list_dtmageck, function(x) get_mageckoutputbydir(x, mydir = "pos"))
+list_dtbydirneg <- lapply(list_dtmageck, function(x) get_mageckoutputbydir(x, mydir = "neg"))
+
+dt_posneg <- rbindlist(c(list_dtbydirpos, list_dtbydirneg))[,.(id, comparison_id, FDR, pval, score, direction)]
+dt_posneg <- merge(dt_posneg[,.(id, comparison_id, FDR, pval, score, direction)], dt_screens[,.(comparison_id, screen, library_species)], by = "comparison_id")
+setnames(dt_posneg, "id", "gene_id")
+
+#default
+human_genes <- unique(dt_posneg[library_species == "Homo sapiens", gene_id])
+dt_posneg[, merge_symbol := gene_id]
+
+# convert the gene symbols
+# mouse
+dt_posneg[library_species == "Mus musculus", merge_symbol := get_mouse2human(mouse_query = gene_id, dt_mouse2human = mouse2human_dt)]
+# agm
+dt_posneg[library_species == "Chlorocebus sabaeus", merge_symbol := get_agm2human(agm_query = gene_id, dt_agm2human = agm2human_dt)]
+# std terms based on aliases
+dt_posneg[ , human_symbol := merge_symbol]
+dt_posneg[!(merge_symbol %in% human_genes), human_symbol := check_genesymbol(query_genes=ifelse(is.na(merge_symbol), gene_id, merge_symbol), dt_map=humanalias_dt)]
+
+# focus on pos/pro-viral hits
+dt_pos <- dt_posneg[direction == "pos"]
+# create normalized rank for each gene in each screen (uniform distribution)
+dt_pos[, norm_rank := frank(score, ties.method = "min")/.N, by = comparison_id]
+
+# identify genes that are in all screens (unique homolog in mouse and agm)
+N_CMPS = dt_pos[,length(unique(comparison_id))]
+common_genes <- dt_pos[,.(n_screens = length(unique(comparison_id))), by = human_symbol][n_screens == N_CMPS, human_symbol]
+
+dt_posconv <- dt_pos[human_symbol %in% common_genes]
+# subset data FDR < 0.25
+hitcommon_genes <- dt_posconv[FDR < 0.25, unique(human_symbol)]
+dt_posconv <- dt_posconv[human_symbol %in% hitcommon_genes]
+
+dt_poswide <- dt_posconv %>% pivot_wider(id_cols = human_symbol, names_from = screen, values_from = norm_rank, values_fn = min) %>% as.data.table()
+df_poswide <- as.data.frame(dt_poswide)
+rownames(df_poswide) <- dt_poswide[,human_symbol]
+
+# mat for pca
+mat_pos <- as.matrix(df_poswide[,c(-1)])
+MAXUNIF <- max(mat_pos[mat_pos <1])
+mat_pos[mat_pos == 1] = MAXUNIF
+# convert to norm
+mat_pos <- qnorm(mat_pos, lower.tail = F)
+# pca
+pca <- prcomp(t(mat_pos))
+
+# pc var
+pctvar <- 100*(pca$sdev^2)/sum(pca$sdev^2)
+names(pctvar) <- colnames(pca$x)
+dt_pcvar <- data.table(PC = as.numeric(gsub("PC","",names(pctvar))), var = pctvar)
+p_var <- ggplot(dt_pcvar, aes(x = factor(PC), y = var)) + geom_point()
+p_var <- p_var + theme_classic()
+p_var <- p_var + labs(x = "PC", y = "% Variance")
+p_var
+
+s3save_ggplot(ggp = p_var, 
+							object_s3uri = file.path(s3outpath, "pca", "FigS1b-propathogen-pca-variance.pdf"),
+							s3bucket = s3bucket, width = 3, height = 5, units = "in")
+
+# pcs
+dt_pcs <- data.table(screen = rownames(pca$x))
+dt_pcs[,colnames(pca$x) :=lapply(colnames(pca$x), function(i) pca$x[,i])]
+dt_pcs <- merge(dt_pcs, dt_screens[,.(screen, pathogen, color_pathogen)], by = "screen")
+dt_pcs[, screen := gsub("Vero_E6", "VeroE6", screen)]
+# color by sense
+cols_pathogen <- unique(dt_pcs[,color_pathogen])
+names(cols_pathogen) <- cols_pathogen
+ 
+p_pca <- ggplot(dt_pcs, aes(x = PC1, y = PC2, label = gsub("_","\n", screen), color = color_pathogen)) + geom_point(size = 0.5, alpha = 0.5) + ggrepel::geom_text_repel()
+p_pca <- p_pca + scale_color_manual(values = cols_pathogen)
+p_pca <- p_pca + theme_classic()
+p_pca <- p_pca + theme(legend.position = "none")
+p_pca <- p_pca + labs(x = paste0("PC1 ", round(pctvar["PC1"],1), "% Var"),
+							y = paste0("PC2 ", round(pctvar["PC2"],1), "% Var"))
+p_pca <-p_pca + coord_fixed(1)
+p_pca
+s3save_ggplot(ggp = p_pca, 
+							object_s3uri = file.path(s3outpath, "pca", "FigS1a-propathogen-pca.pdf"),
+							s3bucket = s3bucket, width = 5.5, height = 5.5, units = "in")
+
+
+plot_pchm <- function(mat, genes, ...){
+	
+	submat <- mat[genes,]
+	row_dist <- dist(submat) 
+	col_dist <- dist(t(submat))
+	row_order <- seriation::seriate(row_dist, method = "OLO")[[1]]$order
+	col_order <- seriation::seriate(col_dist, method = "OLO")[[1]]$order
+	    
+	col_keys <- colnames(submat)[col_order]
+	row_keys <- rownames(submat)[row_order]
+	pheatmap(submat[row_order, col_order], cluster_cols = F, cluster_rows = F, ...)
+}
+
+# top 25 +/- genes in PC1
+
+tpc1genes <- tail(sort(pca$rotation[,"PC1"]),20)
+hpc1genes <- head(sort(pca$rotation[,"PC1"]),20)
+topx <- c(names(tpc1genes), names(hpc1genes))
+
+tmpfile <- paste0(tempfile(), ".pdf")
+plot_pchm(mat = mat_pos, genes = names(tail(sort(abs(pca$rotation[,"PC1"])),40)), 
+					filename = tmpfile, width = 4, height = 7.5)
+put_object(tmpfile, object = file.path(s3outpath, "pca", "propathogen-pca-pc1heatmap-top40.pdf"), bucket = s3bucket)
+
+tmpfile <- paste0(tempfile(), ".pdf")
+plot_pchm(mat = mat_pos, genes = topx,
+					filename = tmpfile, width = 4, height = 7.5)
+put_object(tmpfile, object = file.path(s3outpath, "pca", "FigS1c-propathogen-pca-pc1heatmap-posneg-top20.pdf"), bucket = s3bucket)
+```
+
+### Custom Annot: OST Complex Genes
+
+```{r}
+genes_ost <- c( "DAD1", "DDOST", "MAGT1", "OST4", "OSTC", "RPN1", "RPN2", "STT3A", "STT3B", "TMEM258")
+
+dt_ost <- dt_pos[human_symbol %in% genes_ost,.(human_symbol, comparison_id, FDR)]
+dt_ost <- merge(dt_ost, dt_screens[, .(comparison_id, pathogen, screen_label_short)], by = "comparison_id")
+
+aws.s3::s3write_using(dt_ost[order(FDR),.(comparison_id, screen_label_short, human_symbol, FDR)], 
+											fwrite, 
+											sep = "\t", 
+											object = file.path(s3outpath, "genomewidecrispr-ost-summaryscores.txt"), 
+											bucket = s3bucket)
+
+p <- ggplot(dt_ost, aes(x = screen_label_short, y = human_symbol, size = -log10(FDR), alpha = -log10(FDR))) + geom_point()
+p <- p + theme_minimal() + theme(axis.text.x = element_text(angle = 70, hjust = 1))
+p <- p + labs(x = "", y = "")
+p
+
+s3save_ggplot(ggp = p, 
+							object_s3uri = file.path(s3outpath, "glycosylation", "genomewidecrispr-ost-summary.pdf"),
+							s3bucket = s3bucket, width = 6, height = 5, units = "in")
+
+```
+
+
+
+### Files S4, Figure S2: GSEA KEGG
+
+```{r, fig.width = 10, fig.height = 6}
+MAX_UNIF <- dt_pos[norm_rank < 1, max(norm_rank)]
+dt_pos[norm_rank == 1, norm_rank := MAX_UNIF]
+dt_pos[, qnorm := qnorm(norm_rank, lower.tail = F)]
+# Run GSEA on the qnorm for each comparison
+
+setup_gsea <- function(cmp_id, dt_pos, list_genesets, pcut = 0.05){
+	
+	dt_stats <- dt_pos[comparison_id == cmp_id, .(test_stat = max(abs(qnorm))), by = .(human_symbol)]
+	stats_gsea <- dt_stats[,test_stat]
+	names(stats_gsea) <- dt_stats[, human_symbol]
+	res_gsea <- fgsea(list_genesets, stats_gsea, minSize = 3, maxSize = 500)
+	res_gsea[, gene_list := sapply(leadingEdge, toString)]
+	res_gsea[, leadingEdge := NULL]
+	res_gsea[, comparison_id := cmp_id]
+}
+
+list_comparisons  <- dt_pos[, unique(comparison_id)]
+list_genesets <- get_genesets(organism = "Homo sapiens", gs_selected = "C2|CP:KEGG")
+list_fgsea <- lapply(list_comparisons, function(id) setup_gsea(id, dt_pos, list_genesets))
+
+dt_fgsea <- rbindlist(list_fgsea)
+# sig in at least 4 screens
+dt_sumfgsea1 <- dt_fgsea[padj < 0.05,.N, by = pathway][N>3][order(-N)]
+dt_sumfgsea2 <- dt_fgsea[pathway %in% dt_sumfgsea1[,unique(pathway)]]
+
+dt_sumfgsea2 <- merge(dt_sumfgsea2, dt_screens[, .(comparison_id, pathogen, screen_label_short)], by = "comparison_id")
+dt_sumfgsea2[, pathway := factor(pathway, levels = dt_sumfgsea1[order(-N), pathway])]
+p <- ggplot(dt_sumfgsea2, aes(x = screen_label_short, y = pathway, size = -log10(padj), alpha = -log10(padj))) + geom_point()
+p <- p + theme_minimal() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+p <- p + labs(x = "", y = "")
+p
+
+# summary figure for gsea results
+s3save_ggplot(ggp = p, 
+							object_s3uri = file.path(s3outpath, "gsea", "FigS2-gsea-kegg.pdf"),
+							s3bucket = s3bucket, width = 8.25, height = 3.75, units = "in")
+
+# summary table of padj < 0.05 per comparison
+dt_fgseasum <- merge(dt_fgsea[padj < 0.05], dt_screens[,.(comparison_id, screen_label_short)], by = "comparison_id")
+col_order <- c("screen_label_short", "pathway", "padj", "NES", "size", "gene_list", "comparison_id")
+
+aws.s3::s3write_using(dt_fgseasum[order(screen_label_short, padj),..col_order], fwrite, sep = "\t", object = file.path(s3outpath, "gsea", "FilesS4-gsea-kegg-summary.txt"), bucket = s3bucket)
+```
+
+### Files S3: GSEA CORUM (28.11.2022 Corum 4.1 release)
+
+```{r}
+dt_corumnew <- dt_froms3(corum_s3file)[,.(complex_name, subunits_gene_name)]
+dt_corumnew[, list_genes := lapply(subunits_gene_name, tstrsplit, ";")]
+complex_names <- dt_corumnew[,unique(complex_name)]
+list_corum <- lapply(complex_names, function(x) unique(dt_corumnew[complex_name == x, unlist(list_genes)]))
+names(list_corum) <- complex_names
+
+list_fgseacorum <- lapply(list_comparisons, function(id) setup_gsea(id, dt_pos, list_corum))
+dt_fgseacorum <- rbindlist(list_fgseacorum)
+
+dt_sumfgseacorum1 <- dt_fgseacorum[padj < 0.05,.N, by = pathway][N>3][order(-N)]
+dt_sumfgseacorum2 <- dt_fgseacorum[pathway %in% dt_sumfgseacorum1[,unique(pathway)]]
+
+dt_sumfgseacorum2 <- merge(dt_sumfgseacorum2, dt_screens[, .(comparison_id, pathogen, screen_label_short)], by = "comparison_id")
+dt_sumfgseacorum2[, pathway := factor(pathway, levels = dt_sumfgseacorum1[order(-N), pathway])]
+p <- ggplot(dt_sumfgseacorum2, aes(x = screen_label_short, y = pathway, size = -log10(padj), alpha = -log10(padj))) + geom_point()
+p <- p + theme_minimal() + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+p <- p + labs(x = "", y = "")
+p
+
+# summary figure for gsea results
+s3save_ggplot(ggp = p, 
+							object_s3uri = file.path(s3outpath, "gsea", "gsea-corum.pdf"),
+							s3bucket = s3bucket, width = 5, height = 5, units = "in")
+
+# summary table of padj < 0.05 per comparison
+dt_fgseacorumsum <- merge(dt_fgseacorum[padj < 0.05], dt_screens[,.(comparison_id, screen_label_short)], by = "comparison_id")
+col_order <- c("screen_label_short", "pathway", "padj", "NES", "size", "gene_list", "comparison_id")
+
+aws.s3::s3write_using(dt_fgseacorumsum[order(screen_label_short, padj),..col_order], fwrite, sep = "\t", object = file.path(s3outpath, "gsea", "FilesS3-gsea-corum-summary.txt"), bucket = s3bucket)
+
+```
+
+# Session Info
+
+```{r}
+sessionInfo()
+```
