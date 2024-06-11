@@ -1,0 +1,8 @@
+target
+.bloop
+.metals
+test.html
+core/src/main/resources/.DS_Store
+.vscode/settings.json
+.bsp/sbt.json
+targetJS/

@@ -1,0 +1,12 @@
+target/
+.bloop/
+.metals/
+.DS_Store
+*jar
+!jdistlib-0.4.5-bin.jar
+*zip
+.vscode/settings.json
+.ammonite/
+docker_build
+.bsp/sbt.json
+targetJS/
