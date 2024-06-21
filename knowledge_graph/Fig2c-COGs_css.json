@@ -1,0 +1,137 @@
+[
+    {
+        "selector": "node",
+        "style": {
+            "font-family": "helvetica",
+            "font-size": "15px",
+            "label": "data(node_name)",
+            "text-valign": "top",
+            "text-halign": "center"
+        }
+    },{
+        "selector": "node[type = \"disease\"]",
+        "css": {
+            "background-color": "rgba(0, 0, 0, 0.25)"
+        }
+    },{
+        "selector": "node[type = \"gene/protein\"]",
+        "css": {
+            "background-color": "rgba(255, 255, 255, 0.5)"
+        }
+    },{
+        "selector": "node[node_name = \"COG8\"]",
+        "style": {
+            "text-valign": "top",
+            "text-halign": "right",
+            "background-color": "rgba(230, 150, 0, 0.25)"
+        }
+    },{
+        "selector": "node[node_name = \"COPG1\"]",
+        "style": {
+            "text-valign": "top",
+            "text-halign": "right",
+            "background-color": "rgba(128, 128, 128, 0.25)"
+        }
+    
+    },{
+        "selector": "node[node_name = \"COG5\"]",
+        "style": {
+            "text-valign": "bottom",
+            "text-halign": "right",
+            "background-color": "rgba(0, 158, 115, 0.25)"
+        }
+    },{
+        "selector": "node[node_name = \"COG6\"]",
+        "style": {
+            "text-valign": "bottom",
+            "text-halign": "right",
+            "background-color": "rgba(86, 180, 233, 0.25)"
+        }
+    },{
+        "selector": "node[node_name = \"COG4\"]",
+        "style": {
+            "text-valign": "bottom",
+            "text-halign": "right",
+            "background-color": "rgba(230, 150, 0, 0.25)"
+        }
+    },{
+        "selector": "node[node_name = \"COG2\"]",
+        "style": {
+            "text-valign": "bottom",
+            "text-halign": "left",
+            "background-color": "rgba(230, 150, 0, 0.25)"
+        }
+    },{
+        "selector": "node[node_name = \"COG3\"]",
+        "style": {
+            "text-valign": "top",
+            "text-halign": "left",
+            "background-color": "rgba(230, 150, 0, 0.25)"
+        }
+    },{
+        "selector": "node[node_name = \"COG7\"]",
+        "style": {
+            "background-color": "rgba(86, 180, 233, 0.25)"
+        }
+    },{
+        "selector": "node[node_name = \"MERS-CoV\"]",
+        "style": {
+            "text-valign": "top",
+            "text-halign": "right"
+        }
+    },{
+        "selector": "edge[display_relation = \"crispr\"]",
+        "style": {
+            "background-color": "rgba(0, 37, 47, 0.5)",
+            "line-color": "rgba(0, 37, 47, 0.5)"
+        }
+    },{
+        "selector": "edge[display_relation = \"KroganCovHuPPI\"]",
+        "css": {
+            "background-color": "rgba(85, 128, 170, 0.5)",
+            "line-color": "rgba(85, 128, 170, 0.5)"
+        }
+    },{
+        "selector": "edge[display_relation = \"KimPPI\"]",
+        "css": {
+            "background-color": "rgba(85, 128, 170, 0.5)",
+            "line-color": "rgba(85, 128, 170, 0.5)"
+        }
+    },{
+        "selector": "edge[display_relation = \"KroganIAV\"]",
+        "css": {
+            "background-color": "rgba(85, 128, 170, 0.5)",
+            "line-color": "rgba(85, 128, 170, 0.5)"
+        }
+    },{
+        "selector": "edge[display_relation = \"KroganIBV\"]",
+        "css": {
+            "background-color": "rgba(85, 128, 170, 0.5)",
+            "line-color": "rgba(85, 128, 170, 0.5)"
+        }
+    },{
+        "selector": "edge[display_relation = \"REACTOMEFI\"]",
+        "css": {
+            "background-color": "rgba(85, 85, 170, 0.5)",
+            "line-color": "rgba(85, 85, 170, 0.5)"
+        }
+    },{
+        "selector": "edge[display_relation = \"CORUM\"]",
+        "css": {
+            "background-color": "rgba(170, 170, 85, 0.5)",
+            "line-color": "rgba(170, 170, 85, 0.5)"
+        }
+    },{
+        "selector": "edge[display_relation = \"GEPanelAppCoV\"]",
+        "css": {
+            "background-color": "rgba(85, 170, 170, 0.5)",
+            "line-color": "rgba(85, 170, 170, 0.5)"
+        }
+    },{
+        "selector": "edge[display_relation = \"BIOGRID\"]",
+        "css": {
+            "background-color": "rgba(170, 106, 85, 0.5)",
+            "line-color": "rgba(170, 106, 85, 0.5)"
+        }
+    }
+]

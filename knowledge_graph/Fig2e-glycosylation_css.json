@@ -1,0 +1,169 @@
+[{
+    "selector": "node",
+    "style": {
+        "font-family": "helvetica",
+        "font-size": "15px",
+        "label": "data(node_name)",
+        "text-valign": "top",
+        "text-halign": "center"
+    }
+},{
+    "selector": "node[type = \"disease\"]",
+    "css": {
+        "background-color": "rgba(0, 0, 0, 0.25)"
+    }
+},{
+    "selector": "node[node_name = \"STT3A\"]",
+    "style": {
+        "text-valign": "bottom",
+        "text-halign": "right",
+        "background-color": "rgba(0, 158, 115, 0.25)"
+    }
+},{
+    "selector": "node[node_name = \"STT3B\"]",
+    "style": {
+        "text-valign": "bottom",
+        "text-halign": "right",
+        "background-color": "rgba(0, 158, 115, 0.25)"
+    }
+},{
+    "selector": "node[node_name = \"DAD1\"]",
+    "style": {
+        "text-valign": "top",
+        "text-halign": "right",
+        "border-color": "black",
+        "border-width": "3px",
+        "background-color": "rgba(255, 255, 255, 0.25)"
+    }
+},{
+    "selector": "node[node_name = \"OST4\"]",
+    "style": {
+        "text-valign": "bottom",
+        "text-halign": "left",
+        "background-color": "rgba(128, 128, 128, 0.25)"
+    }
+},{
+    "selector": "node[node_name = \"TMEM258\"]",
+    "style": {
+        "text-valign": "bottom",
+        "text-halign": "left",
+        "background-color": "rgba(128, 128, 128, 0.25)"
+    }
+},{
+    "selector": "node[node_name = \"RPN2\"]",
+    "style": {
+        "text-valign": "top",
+        "text-halign": "left",
+        "background-color": "rgba(0, 158, 115, 0.25)"
+    }
+},{
+    "selector": "node[node_name = \"RPN1\"]",
+    "style": {
+        "text-valign": "top",
+        "text-halign": "right",
+        "background-color": "rgba(128, 128, 128, 0.25)"
+    }
+},{
+    "selector": "node[node_name = \"DDOST\"]",
+    "style": {
+        "text-valign": "top",
+        "text-halign": "right",
+        "background-color": "rgba(0, 158, 115, 0.25)"
+    }
+},{
+    "selector": "node[node_name = \"MAGT1\"]",
+    "style": {
+        "border-color": "black",
+        "border-width": "3px",
+        "text-valign": "top",
+        "text-halign": "right",
+        "background-color": "rgba(255, 255, 255, 0.25)"
+    }
+},{
+    "selector": "node[node_name = \"OSTC\"]",
+    "style": {
+        "text-valign": "top",
+        "text-halign": "left",
+        "border-color": "black",
+        "border-width": "3px",
+        "background-color": "rgba(255, 255, 255, 0.25)"
+    }
+},{
+    "selector": "node[node_name = \"HCoV-NL63\"]",
+    "style": {
+        "text-valign": "bottom",
+        "text-halign": "left"
+    }
+},{
+    "selector": "node[node_name = \"HRV\"]",
+    "style": {
+        "text-valign": "bottom",
+        "text-halign": "left"
+    }
+},{
+    "selector": "node[node_name = \"PIV3\"]",
+    "style": {
+        "text-valign": "bottom",
+        "text-halign": "left"
+    }
+},{
+    "selector": "node[node_name = \"SARS-CoV-2\"]",
+    "style": {
+        "text-valign": "top",
+        "text-halign": "left"
+    }
+},{
+    "selector": "edge[display_relation = \"crispr\"]",
+    "style": {
+            "background-color": "rgba(0, 37, 47, 0.5)",
+            "line-color": "rgba(0, 37, 47, 0.5)"
+    }
+},{
+    "selector": "edge[display_relation = \"KroganCovHuPPI\"]",
+    "css": {
+            "background-color": "rgba(85, 128, 170, 0.5)",
+            "line-color": "rgba(85, 128, 170, 0.5)"
+    }
+},{
+    "selector": "edge[display_relation = \"KroganIAV\"]",
+    "css": {
+            "background-color": "rgba(85, 128, 170, 0.5)",
+            "line-color": "rgba(85, 128, 170, 0.5)"
+    }
+},{
+    "selector": "edge[display_relation = \"KroganIBV\"]",
+    "css": {
+            "background-color": "rgba(85, 128, 170, 0.5)",
+            "line-color": "rgba(85, 128, 170, 0.5)"
+    }
+},{
+    "selector": "edge[display_relation = \"KimPPI\"]",
+    "css": {
+            "background-color": "rgba(85, 128, 170, 0.5)",
+            "line-color": "rgba(85, 128, 170, 0.5)"
+    }
+},{
+    "selector": "edge[display_relation = \"REACTOMEFI\"]",
+    "css": {
+            "background-color": "rgba(85, 85, 170, 0.5)",
+            "line-color": "rgba(85, 85, 170, 0.5)"
+    }
+},{
+    "selector": "edge[display_relation = \"CORUM\"]",
+    "css": {
+            "background-color": "rgba(170, 170, 85, 0.5)",
+            "line-color": "rgba(170, 170, 85, 0.5)"
+    }
+},{
+    "selector": "edge[display_relation = \"GEPanelAppCoV\"]",
+    "css": {
+            "background-color": "rgba(85, 170, 170, 0.5)",
+            "line-color": "rgba(85, 170, 170, 0.5)"
+    }
+},{
+    "selector": "edge[display_relation = \"BIOGRID\"]",
+    "css": {
+            "background-color": "rgba(170, 106, 85, 0.5)",
+            "line-color": "rgba(170, 106, 85, 0.5)"
+    }
+}]

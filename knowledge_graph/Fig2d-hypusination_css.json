@@ -1,0 +1,150 @@
+[{
+    "selector": "node",
+    "style": {
+        "font-family": "helvetica",
+        "font-size": "15px",
+        "label": "data(node_name)",
+        "text-valign": "top",
+        "text-halign": "center"
+    }
+},{
+    "selector": "node[type = \"disease\"]",
+    "css": {
+        "background-color": "rgba(0, 0, 0, 0.25)"
+    }
+},{
+    "selector": "node[type = \"gene/protein\"]",
+    "css": {
+        "background-color": "rgba(255, 255, 255, 0.25)"
+    }
+},{
+    "selector": "node[node_name = \"EIF5A2\"]",
+    "style": {
+        "text-valign": "top",
+        "text-halign": "right",
+        "border-color": "black",
+        "border-width": "3px"
+    }
+},{
+    "selector": "node[node_name = \"EIF5A\"]",
+    "style": {
+        "text-valign": "bottom",
+        "text-halign": "right",
+        "background-color": "rgba(230, 150, 0, 0.25)"
+    }
+
+},{
+    "selector": "node[node_name = \"ZRANB1\"]",
+    "style": {
+        "text-valign": "bottom",
+        "text-halign": "right",
+        "border-color": "black",
+        "border-width": "3px"
+    }
+},{
+    "selector": "node[node_name = \"DHPS\"]",
+    "style": {
+        "text-valign": "bottom",
+        "text-halign": "right",
+        "background-color": "rgba(86, 180, 233, 0.25)"
+    }
+},{
+    "selector": "node[node_name = \"FBXO32\"]",
+    "style": {
+        "text-valign": "bottom",
+        "text-halign": "left",
+        "border-color": "black",
+        "border-width": "3px"
+    }
+},{
+    "selector": "node[node_name = \"BRCA1\"]",
+    "style": {
+        "text-valign": "bottom",
+        "text-halign": "left",
+        "border-color": "black",
+        "border-width": "3px"
+    }
+},{
+    "selector": "node[node_name = \"SRRM2\"]",
+    "style": {
+        "border-color": "black",
+        "border-width": "3px"
+    }
+},{
+    "selector": "node[node_name = \"TULP3\"]",
+    "style": {
+        "border-color": "black",
+        "border-width": "3px"
+    }
+},{
+    "selector": "node[node_name = \"DOHH\"]",
+    "style": {
+        "background-color": "rgba(230, 150, 0, 0.25)"
+    }
+},{
+    "selector": "node[node_name = \"RSV\"]",
+    "style": {
+        "text-valign": "bottom",
+        "text-halign": "right"
+    }
+},{
+    "selector": "node[node_name = \"HRV\"]",
+    "style": {
+        "text-valign": "bottom",
+        "text-halign": "right"
+    }
+},{
+    "selector": "edge[display_relation = \"crispr\"]",
+    "style": {
+        "background-color": "rgba(0, 37, 47, 0.5)",
+        "line-color": "rgba(0, 37, 47, 0.5)"
+    }
+},{
+    "selector": "edge[display_relation = \"KroganCovHuPPI\"]",
+    "css": {
+        "background-color": "rgba(85, 128, 170, 0.5)",
+        "line-color": "rgba(85, 128, 170, 0.5)"
+    }
+},{
+    "selector": "edge[display_relation = \"KimPPI\"]",
+    "css": {
+        "background-color": "rgba(85, 128, 170, 0.5)",
+        "line-color": "rgba(85, 128, 170, 0.5)"
+    }
+},{
+    "selector": "edge[display_relation = \"KroganIAV\"]",
+    "css": {
+        "background-color": "rgba(85, 128, 170, 0.5)",
+        "line-color": "rgba(85, 128, 170, 0.5)"
+    }
+},{
+    "selector": "edge[display_relation = \"KroganIBV\"]",
+    "css": {
+        "background-color": "rgba(85, 128, 170, 0.5)",
+        "line-color": "rgba(85, 128, 170, 0.5)"
+    }
+},{
+    "selector": "edge[display_relation = \"REACTOMEFI\"]",
+    "css": {
+        "background-color": "rgba(85, 85, 170, 0.5)",
+        "line-color": "rgba(85, 85, 170, 0.5)"
+    }
+},{
+    "selector": "edge[display_relation = \"CORUM\"]",
+    "css": {
+        "background-color": "rgba(170, 170, 85, 0.5)",
+        "line-color": "rgba(170, 170, 85, 0.5)"
+    }
+},{
+    "selector": "edge[display_relation = \"GEPanelAppCoV\"]",
+    "css": {
+        "background-color": "rgba(85, 170, 170, 0.5)",
+        "line-color": "rgba(85, 170, 170, 0.5)"
+    }
+},{
+    "selector": "edge[display_relation = \"BIOGRID\"]",
+    "css": {
+        "background-color": "rgba(170, 106, 85, 0.5)",
+        "line-color": "rgba(170, 106, 85, 0.5)"
+    }
+}]
