@@ -8,5 +8,5 @@ Supporting code for figures, texts, and files related to screen-level analysis
 	- Files S1-4
 	- Figure 1, Figure S1-2
 - `subpool-glycos-summary.Rmd`
-	- Files S5
+	- Files S6
 	- Figure 3A

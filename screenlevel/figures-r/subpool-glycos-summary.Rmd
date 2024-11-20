@@ -13,7 +13,7 @@ params:
   s3bucket: "s3://[]"
   datapath: "projects/manuscript-crispr-hdt/data/subpools"
   file_screenlisting: "projects/manuscript-crispr-hdt/data/20240514-screencomparisonlisting-glycos.txt"
-  outpath: "projects/manuscript-crispr-hdt/summaries/results"
+  outpath: "projects/manuscript-crispr-hdt/summaries/revised-results"
   file_humanalias: "projects/manuscript-crispr-hdt/resources/aliases/gene_aliases.tsv"
 ---
 
@@ -28,6 +28,7 @@ library(janitor)
 library(data.table)
 library(tidyr)
 library(magrittr)
+library(writexl)
 
 library(gt)
 library(ggplot2)
@@ -37,9 +38,6 @@ library(seriation)
 
 library(fgsea)
 library(msigdbr)
-
-library(igraph)
-library(visNetwork)
 
 source("r-utils/io-utils.R")
 source("r-utils/summary-utils.R")
@@ -107,7 +105,7 @@ dt_screens[grepl("HRV", pathogen), color_pathogen := "#310047"]
 
 ## Figures, Tables, and Files
 
-### Files S5: MAGeCK Gene Summary Files
+### Files S6: MAGeCK Gene Summary Files
 
 ```{r}
 MAGECKPATH = "mageck"
@@ -135,6 +133,17 @@ aws.s3::s3write_using(dt_print,
 																				 "mageck", "screenlisting.txt"), 
 											bucket = s3bucket)
 ```
+
+
+
+```{r}
+names(list_dtmageck) <- dt_screens[, paste0(comparison_id, "_", screen)]
+list_s1file <- c(list(summary = dt_print), list_dtmageck)
+file_s1 <- "FilesS6_GlycosylationSubpoolCRISPR-MAGeCK-GeneSummary.xlsx"
+write_xlsx(list_s1file, path = file_s1)
+put_object(file_s1, object = file.path(s3outpath, "mageck", file_s1), bucket = s3bucket)
+```
+
 
 ### Volcano Plots
 

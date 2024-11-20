@@ -13,7 +13,7 @@ params:
   s3bucket: "s3://[]"
   datapath: "projects/manuscript-crispr-hdt/data"
   file_screenlisting: "projects/manuscript-crispr-hdt/data/20240229-screencomparison-listing.txt"
-  outpath: "projects/manuscript-crispr-hdt/summaries/results"
+  outpath: "projects/manuscript-crispr-hdt/summaries/revised-results"
   file_mouse2human: "projects/manuscript-crispr-hdt/resources/mouse2human/gene_orthologs.tsv"
   file_agm2human: "projects/manuscript-crispr-hdt/resources/agm2human/mart_export.txt"
   file_humanalias: "projects/manuscript-crispr-hdt/resources/aliases/gene_aliases.tsv"
@@ -31,6 +31,8 @@ library(janitor)
 library(data.table)
 library(tidyr)
 library(magrittr)
+library(writexl)
+library(dplyr)
 
 library(gt)
 library(ggplot2)
@@ -40,9 +42,6 @@ library(seriation)
 
 library(fgsea)
 library(msigdbr)
-
-library(igraph)
-library(visNetwork)
 
 source("r-utils/io-utils.R")
 source("r-utils/summary-utils.R")
@@ -156,6 +155,15 @@ aws.s3::s3write_using(dt_print,
 											bucket = s3bucket)
 ```
 
+
+```{r}
+names(list_dtmageck) <- dt_screens[, paste0(comparison_id, "_", screen)]
+list_s1file <- c(list(summary = dt_print), list_dtmageck)
+file_s1 <- "FilesS1_GenomewideCRISPR-MAGeCK-GeneSummary.xlsx"
+write_xlsx(list_s1file, path = file_s1)
+put_object(file_s1, object = file.path(s3outpath, "mageck", file_s1), bucket = s3bucket)
+```
+
 ### Files S2: Volcano Plots
 
 ```{r}
@@ -249,7 +257,7 @@ s3save_ggplot(
 ```
 
 
-### Figure 1: Scatter Plot of Significance Scores Per Screen
+### Old Figure 1: Scatter Plot of Significance Scores Per Screen
 
 ```{r}
 dt_scores <- rbindlist(list_dtscores)
@@ -270,17 +278,59 @@ list_receptor <- c("ACE2", "ANPEP", "DPP4", "ICAM1")
 dt_plot[id %in% list_receptor & hit != "no", hit := "receptor"]
 hitcolors <- c("no" = "gray", "enriched" = "#d73027", "depleted" = "#4575b4", "receptor" = "black")
 
-p <- ggplot(dt_plot, aes(x = random_index, y = -log10(FDR), label = genelabel, color = factor(hit), alpha = -log10(FDR))) + geom_point(size = 0.01) + ggrepel::geom_text_repel(size = 2, max.overlaps = 100) + facet_wrap(~screen_label, ncol = 1) + theme_minimal()
-p <- p + scale_color_manual(values = hitcolors)
-p <- p + theme(axis.text = element_text(size = 5), axis.title.x = element_blank(), axis.title.y = element_text(size = 7), legend.position = "none")
-p
 
-s3save_ggplot(ggp = p, 
-							object_s3uri = file.path(s3outpath, "hitsummary", "Fig 1 scatterview.pdf"),
-							s3bucket = s3bucket, width = 7, height = 10, units = "in")
-s3save_ggplot(ggp = p, 
-							object_s3uri = file.path(s3outpath, "hitsummary", "Fig 1 scatterview.jpg"),
-							s3bucket = s3bucket, device = "jpeg", width = 7, height = 10, units = "in", dpi = 320, bg = "white")
+.plot_screen <- function(dt_subplot, screen_label, index){
+
+  top_hits <- dt_subplot %>% filter(genelabel !="") %>% mutate(rank_max = 20000, ypos_max = 4.5)
+  
+  hitcolors <- c("no" = "gray", "enriched" = "#d73027", "depleted" = "#4575b4", "receptor" = "black")
+  top_hits$color <- hitcolors[top_hits$hit]
+  p <- ggplot(dt_subplot, aes(x = rank, y = -log10(FDR), color = factor(hit))) +
+      geom_point(size = 0.1) 
+  p <- p + scale_y_continuous(limits = c(0,4.5))
+  p <- p + scale_x_log10()
+  p <- p + scale_color_manual(values = hitcolors)
+  p <- p + theme_minimal()
+  p <- p + theme(legend.position = "none", panel.grid = element_blank(), plot.title = element_text(size = 10)) + labs(title = screen_label)
+  if(index != 4){
+    p <- p + ylab(NULL)
+  }
+  if(index != 11){
+    p <- p + xlab(NULL)
+  }else{
+    p <- p + xlab("Gene Rank")
+  }
+  
+  for(i in 1:nrow(top_hits)){
+    p <- p + annotate("text", 
+                        x = top_hits$rank_max, 
+                        y = top_hits$ypos_max[i] - (top_hits$rank[i]-1)*0.4,
+                        color = top_hits$color[i],
+                        label = top_hits$genelabel[i],
+                        size = 3, hjust = 1, vjust = 1)
+    
+    p <- p + annotate("segment", 
+                      x = top_hits$rank[i], 
+                      xend = top_hits$rank_max[i] - 1000, 
+                      y = -log10(top_hits$FDR[i]),
+                      yend = top_hits$ypos_max[i] - (top_hits$rank[i]-1)*0.4,
+                      color = "grey50", size = 0.1)
+  }
+  p
+  
+}
+
+dt_plot[, screen_label_plot := gsub(", ", ",\n", screen_label)]
+ordered_screens <- dt_plot[order(pathogen), unique(screen_label_plot)]
+list_plots <- lapply(1:length(ordered_screens), function(i) .plot_screen(dt_subplot = dt_plot[screen_label_plot == ordered_screens[i]], screen_label = ordered_screens[i], index = i))
+pgrid <- plot_grid(plotlist = list_plots, nrow = 4, ncol = 3, align = "hv")
+
+s3save_ggplot(ggp = pgrid, 
+							object_s3uri = file.path(s3outpath, "hitsummary", "Fig 1 ordered.pdf"),
+							s3bucket = s3bucket, width = 8, height = 10, units = "in")
+s3save_ggplot(ggp = pgrid, 
+							object_s3uri = file.path(s3outpath, "hitsummary", "Fig 1 ordered.jpg"),
+							s3bucket = s3bucket, device = "jpeg", width = 8, height = 10, units = "in", dpi = 320, bg = "white")
 ```
 
 #### Hit Summary Across Screens
