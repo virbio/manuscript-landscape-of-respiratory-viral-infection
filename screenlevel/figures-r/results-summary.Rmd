@@ -257,7 +257,7 @@ s3save_ggplot(
 ```
 
 
-### Old Figure 1: Scatter Plot of Significance Scores Per Screen
+### Figure 1: Scatter Plot of Significance Scores Per Screen
 
 ```{r}
 dt_scores <- rbindlist(list_dtscores)
@@ -325,6 +325,7 @@ ordered_screens <- dt_plot[order(pathogen), unique(screen_label_plot)]
 list_plots <- lapply(1:length(ordered_screens), function(i) .plot_screen(dt_subplot = dt_plot[screen_label_plot == ordered_screens[i]], screen_label = ordered_screens[i], index = i))
 pgrid <- plot_grid(plotlist = list_plots, nrow = 4, ncol = 3, align = "hv")
 
+pgrid
 s3save_ggplot(ggp = pgrid, 
 							object_s3uri = file.path(s3outpath, "hitsummary", "Fig 1 ordered.pdf"),
 							s3bucket = s3bucket, width = 8, height = 10, units = "in")
