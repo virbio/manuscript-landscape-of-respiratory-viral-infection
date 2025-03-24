@@ -1,0 +1,5 @@
+report_id	comparison_id	sample_description	pathogen	cell_line	library_species	HPI	selection
+expt103-ref78	443	infected_48HPI	IAV-PR8	H1HeLa	Homo sapiens	48	survival
+expt105-ref78	447	infected_sorted_24HPI_IAV_NEGATIVE	IAV-PR8	A549	Homo sapiens	24	sorting:pathogen negative
+expt110-ref78	476	infected_24HPI	HRV-16	H1HeLa	Homo sapiens	24	survival
+expt107-ref78	455	infected_sorted_30HPI_PIV_NEGATIVE	PIV3-GFP	A549	Homo sapiens	30	sorting:pathogen negative

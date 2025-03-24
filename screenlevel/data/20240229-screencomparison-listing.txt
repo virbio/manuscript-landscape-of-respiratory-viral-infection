@@ -1,0 +1,13 @@
+report_id	comparison_id	sample_description	pathogen	cell_line	library_species	HPI	selection
+expt23-ref35	90	Negative_sorted_untreated	IAV-PR8	A549	Homo sapiens	24	sorting
+expt33-ref35	138	infected	IAV-PR8	H1HeLa	Homo sapiens	48	survival
+expt6-ref37	30	inf_untreated	IAV-PR8	BV-2	Mus musculus	48	survival
+expt26-ref35	102	HRV_A16	HRV-16	H1HeLa	Homo sapiens	30	survival
+expt27-ref35	107	Dim minus IFN-beta	PIV3-GFP	A549	Homo sapiens	36	sorting:pathogen low
+expt1-ref35	1	Low	RSV-GFP5	HEp-2	Homo sapiens	48	sorting:pathogen low
+expt82-ref35	366	infected_untreated_72HPI	HCoV-229E	SK-MES-1	Homo sapiens	72	survival
+expt89-ref35	383	Infected_Untreated_72hpi	HCoV-NL63	Huh-7	Homo sapiens	72	survival
+expt88-ref36	381	infected_untreated_96HPI	HCoV-OC43	HCT-8	Homo sapiens	96	survival
+expt91-ref35	386	infected_untreated_EMC_48HPI	MERS-CoV-EMC2012	NCI-H727	Homo sapiens	48	survival
+expt90-ref35	385	infected_untreated_SA_FLA_48HPI	MERS-CoV-FL2014	NCI-H727	Homo sapiens	48	survival
+expt70-ref70	314	infected_72HPI	SARS-CoV-2	Vero E6	Chlorocebus sabaeus	72	survival
