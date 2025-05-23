@@ -1,0 +1,3 @@
+id	enrichment	comparison_type	comparison_position	name
+386	pro-pathogen	samples	compare_from	uninfected_untreated_mock
+386	pro-pathogen	samples	compare_to	infected_untreated_EMC_48HPI
