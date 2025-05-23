@@ -1,0 +1,3 @@
+id	enrichment	comparison_type	comparison_position	name
+1	pro-pathogen	samples	compare_from	Mock
+1	pro-pathogen	samples	compare_to	Low

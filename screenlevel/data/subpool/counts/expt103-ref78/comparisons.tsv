@@ -1,0 +1,3 @@
+id	enrichment	comparison_type	comparison_position	name
+443	pro-pathogen	samples	compare_from	uninfected_48HPI
+443	pro-pathogen	samples	compare_to	infected_48HPI

@@ -1,0 +1,3 @@
+id	enrichment	comparison_type	comparison_position	name
+455	pro-pathogen	samples	compare_from	infected_unsorted_30HPI_PIV
+455	pro-pathogen	samples	compare_to	infected_sorted_30HPI_PIV_NEGATIVE
